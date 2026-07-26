@@ -1,0 +1,30 @@
+[project]
+name = "vault-tools"
+version = "0.1.0"
+description = "Knowledge vault utilities: digest, tension index, wiki-link graph"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "pyyaml>=6.0",
+]
+
+[project.scripts]
+vault-digest = "vault_tools.digest.cli:main"
+tension-index = "vault_tools.tension_index.cli:main"
+vg = "vault_tools.wiki_graph.cli:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 100
+
+[dependency-groups]
+dev = [
+    "pytest>=9.0.3",
+    "ruff>=0.15.10",
+]
