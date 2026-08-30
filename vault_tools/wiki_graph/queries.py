@@ -2,6 +2,28 @@
 
 from vault_tools.shared.wiki_links import slugify
 
+# Paths whose whole job is to show wiki-link syntax as scaffolding -- prompt/spec
+# templates, health report archives, methodology notes explaining the syntax itself,
+# queue task stubs referencing not-yet-created notes. Their [[placeholder]] targets
+# were never meant to resolve, so they don't belong in a broken-link count at all.
+# Found 2026-08-30: fixing the backtick-code-span bug in extract_links() (see
+# wiki_links.py) already removes most of this category when examples are properly
+# backtick-wrapped; this covers the rest, where they aren't.
+SCAFFOLD_PATH_PREFIXES = (
+    "ops/health/",
+    "ops/work-wiki/",
+    "ops/queue/",
+    "ops/methodology/",
+    "templates/",
+    ".claude/skills/",
+)
+SCAFFOLD_FILES = frozenset({"CLAUDE.md"})
+
+
+def is_scaffold_path(path: str) -> bool:
+    """True if a vault-relative path is scaffolding, not real content."""
+    return path in SCAFFOLD_FILES or path.startswith(SCAFFOLD_PATH_PREFIXES)
+
 
 def build_incoming(outgoing: dict[str, list[str]]) -> dict[str, list[str]]:
     """Invert outgoing index to build incoming (backlink) index."""
@@ -14,13 +36,22 @@ def build_incoming(outgoing: dict[str, list[str]]) -> dict[str, list[str]]:
     return incoming
 
 
-def get_broken(outgoing: dict[str, list[str]], file_index: dict[str, str]) -> list[tuple[str, str]]:
+def get_broken(
+    outgoing: dict[str, list[str]],
+    file_index: dict[str, str],
+    exclude_scaffold: bool = True,
+) -> list[tuple[str, str]]:
     """Return (source, broken_target) pairs for links with no matching file.
 
     Cross-vault links (no file match) are included -- callers may want to filter.
+    Scaffolding sources (see SCAFFOLD_PATH_PREFIXES) are excluded by default since
+    their wiki-link syntax is illustrative, not navigational; pass
+    exclude_scaffold=False to include them anyway.
     """
     broken = []
     for source, targets in outgoing.items():
+        if exclude_scaffold and is_scaffold_path(file_index.get(source, "")):
+            continue
         for target in targets:
             if target not in file_index:
                 broken.append((source, target))

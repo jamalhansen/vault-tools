@@ -40,6 +40,19 @@ class TestGetPendingCounts:
         counts = get_pending_counts(tmp_path)
         assert counts["inbox"] == 0
 
+    def test_excludes_resolved_tensions(self):
+        # fixtures/ops/tensions/ has one active, one pending, one resolved -- a bare
+        # glob would count all three. Only active+pending are genuinely unresolved.
+        counts = get_pending_counts(FIXTURES)
+        assert counts["tensions"] == 2
+
+    def test_counts_only_pending_observations(self):
+        # fixtures/ops/observations/ has one pending, one resolved -- a bare glob
+        # would report 2. This is the exact bug that showed "21 pending" in
+        # ops/digest.md when only 2 observations were actually pending.
+        counts = get_pending_counts(FIXTURES)
+        assert counts["observations"] == 1
+
 
 class TestGetDueReminders:
     def test_returns_overdue_reminders(self):

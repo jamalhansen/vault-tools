@@ -45,6 +45,17 @@ class TestGetBroken:
         targets = [t for _, t in pairs]
         assert "note-beta" not in targets
 
+    def test_excludes_scaffold_paths_by_default(self, graph):
+        # templates/example-template.md links to [[note-title]] as placeholder
+        # syntax, not a real reference -- fixed 2026-08-30 alongside the
+        # backtick-code-span fix in wiki_links.py.
+        pairs = get_broken(graph["outgoing"], graph["file_index"])
+        assert not any(s == "example-template" for s, _ in pairs)
+
+    def test_includes_scaffold_paths_when_asked(self, graph):
+        pairs = get_broken(graph["outgoing"], graph["file_index"], exclude_scaffold=False)
+        assert any(s == "example-template" and t == "note-title" for s, t in pairs)
+
 
 class TestGetBacklinks:
     def test_finds_backlinks(self, graph):

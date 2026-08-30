@@ -79,15 +79,53 @@ def get_active_threads(vault: Path) -> list[tuple[str, str]]:
     return threads
 
 
+_STATUS_RE = re.compile(r"^status:\s*(\S+)", re.MULTILINE)
+
+
+def _frontmatter_status(path: Path) -> str | None:
+    text = path.read_text(encoding="utf-8", errors="replace")
+    if not text.startswith("---"):
+        return None
+    end = text.find("\n---", 3)
+    if end == -1:
+        return None
+    m = _STATUS_RE.search(text[:end])
+    return m.group(1) if m else None
+
+
 def get_pending_counts(vault: Path) -> dict[str, int]:
-    """Return file counts for inbox/, ops/tensions/, ops/observations/."""
+    """Return counts for inbox/, ops/tensions/, ops/observations/.
+
+    inbox/ has no status field -- everything there is awaiting /reduce, so a bare
+    file count is correct. tensions/ and observations/ do have status, and a bare
+    glob previously counted resolved/implemented/archived files as "pending" right
+    alongside genuinely open ones -- e.g. 21 observations reported when 2 were
+    actually pending. Fixed 2026-08-30 (see ops/tool-state-content-discovery.md-style
+    postmortem in the digest's own git history for this commit).
+
+    "Unresolved" for a tension means status active OR pending -- both are open, only
+    resolved/archived tensions are done. Matches the definition session-orient.sh
+    uses for the same count.
+    """
     counts = {}
-    for subdir in ("inbox", "ops/tensions", "ops/observations"):
-        path = vault / subdir
-        if path.exists():
-            counts[subdir.split("/")[-1]] = len(list(path.glob("*.md")))
-        else:
-            counts[subdir.split("/")[-1]] = 0
+
+    inbox_path = vault / "inbox"
+    counts["inbox"] = len(list(inbox_path.glob("*.md"))) if inbox_path.exists() else 0
+
+    tensions_path = vault / "ops" / "tensions"
+    counts["tensions"] = (
+        sum(1 for f in tensions_path.glob("*.md") if _frontmatter_status(f) in ("active", "pending"))
+        if tensions_path.exists()
+        else 0
+    )
+
+    observations_path = vault / "ops" / "observations"
+    counts["observations"] = (
+        sum(1 for f in observations_path.glob("*.md") if _frontmatter_status(f) == "pending")
+        if observations_path.exists()
+        else 0
+    )
+
     return counts
 
 
