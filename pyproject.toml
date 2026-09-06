@@ -6,12 +6,14 @@ readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
     "pyyaml>=6.0",
+    "duckdb>=1.1.0",
 ]
 
 [project.scripts]
 vault-digest = "vault_tools.digest.cli:main"
 tension-index = "vault_tools.tension_index.cli:main"
 vg = "vault_tools.wiki_graph.cli:main"
+wsearch = "vault_tools.weighted_search.cli:main"
 
 [build-system]
 requires = ["hatchling"]
