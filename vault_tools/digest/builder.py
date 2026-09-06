@@ -104,8 +104,12 @@ def get_pending_counts(vault: Path) -> dict[str, int]:
     postmortem in the digest's own git history for this commit).
 
     "Unresolved" for a tension means status active OR pending -- both are open, only
-    resolved/archived tensions are done. Matches the definition session-orient.sh
-    uses for the same count.
+    resolved/archived tensions are done. "active" is a durable, analyzed state (has
+    written resolution-candidate analysis), not untriaged backlog -- CLAUDE.md's
+    "5+ pending tensions -> /rethink" threshold means literally status:pending, not
+    unresolved. Conflating the two overstated the /rethink trigger 37 vs 11 on
+    2026-09-06 (found by /arscontexta:architect); both counts are now tracked
+    separately so the digest doesn't misrepresent which number drives that threshold.
     """
     counts = {}
 
@@ -115,6 +119,11 @@ def get_pending_counts(vault: Path) -> dict[str, int]:
     tensions_path = vault / "ops" / "tensions"
     counts["tensions"] = (
         sum(1 for f in tensions_path.glob("*.md") if _frontmatter_status(f) in ("active", "pending"))
+        if tensions_path.exists()
+        else 0
+    )
+    counts["tensions_pending"] = (
+        sum(1 for f in tensions_path.glob("*.md") if _frontmatter_status(f) == "pending")
         if tensions_path.exists()
         else 0
     )
@@ -242,7 +251,7 @@ def build_digest(
         "",
         "## Pending",
         f"- inbox: {counts.get('inbox', 0)} items",
-        f"- tensions: {counts.get('tensions', 0)} unresolved",
+        f"- tensions: {counts.get('tensions_pending', 0)} pending, {counts.get('tensions', 0)} unresolved total (incl. active)",
         f"- observations: {counts.get('observations', 0)} pending",
         "",
         "## Reminders Due",
