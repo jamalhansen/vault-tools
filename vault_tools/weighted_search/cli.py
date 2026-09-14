@@ -1,7 +1,11 @@
 """wsearch: column-weighted BM25 search over vault notes.
 
-    wsearch build [--vault PATH] [--db PATH]
+    wsearch build [--vault PATH] [--subdirs notes] [--db PATH]
     wsearch query "..." [--db PATH] [--top N] [--weights T,D,B] [--explain]
+
+One index file per vault by default (~/.cache/vault-tools/wsearch-<vaultname>.duckdb),
+so `wsearch query` on a second vault needs --db pointed at that vault's index file --
+there's no vault-detection at query time, only at build time.
 """
 
 import argparse
@@ -12,15 +16,22 @@ from vault_tools.shared.vault import resolve_vault
 from vault_tools.weighted_search.indexer import build_index
 from vault_tools.weighted_search.search import DEFAULT_WEIGHTS, search
 
-DEFAULT_DB = Path.home() / ".cache" / "vault-tools" / "wsearch.duckdb"
+DEFAULT_DB_DIR = Path.home() / ".cache" / "vault-tools"
+
+
+def _default_db_for(vault: Path) -> Path:
+    """One index file per vault name, so indexing a second vault doesn't silently
+    overwrite the first vault's index under the same fixed filename."""
+    return DEFAULT_DB_DIR / f"wsearch-{vault.name.lower()}.duckdb"
 
 
 def _cmd_build(args: argparse.Namespace) -> None:
     vault = resolve_vault(args.vault)
-    db_path = Path(args.db).expanduser()
+    db_path = Path(args.db).expanduser() if args.db else _default_db_for(vault)
     db_path.parent.mkdir(parents=True, exist_ok=True)
-    n = build_index(vault, db_path)
-    print(f"Indexed {n} notes from {vault / 'notes'} -> {db_path}")
+    subdirs = [s.strip() for s in args.subdirs.split(",") if s.strip()]
+    n = build_index(vault, db_path, subdirs=subdirs)
+    print(f"Indexed {n} notes from {vault} ({', '.join(subdirs)}) -> {db_path}")
 
 
 def _cmd_query(args: argparse.Namespace) -> None:
@@ -61,12 +72,21 @@ def main() -> None:
 
     build_p = sub.add_parser("build", help="build or rebuild the index")
     build_p.add_argument("--vault", default=None, help="vault path (default: $VAULT_PATH or ~/vaults/Contexta)")
-    build_p.add_argument("--db", default=str(DEFAULT_DB), help="index file path")
+    build_p.add_argument("--db", default=None, help="index file path (default: one per vault name, see module docstring)")
+    build_p.add_argument(
+        "--subdirs", default="notes",
+        help="comma-separated subdirs to index, relative to --vault (default: notes -- "
+             "e.g. Contexta uses notes/, a vault with a different layout like KeySix's "
+             "thinking-notes/ needs this set explicitly)",
+    )
     build_p.set_defaults(func=_cmd_build)
 
     query_p = sub.add_parser("query", help="run a weighted BM25 query")
     query_p.add_argument("query")
-    query_p.add_argument("--db", default=str(DEFAULT_DB), help="index file path")
+    query_p.add_argument(
+        "--db", default=str(_default_db_for(Path.home() / "vaults" / "Contexta")),
+        help="index file path (default: Contexta's index -- pass explicitly for any other vault)",
+    )
     query_p.add_argument("--top", type=int, default=10)
     query_p.add_argument("--weights", default=None, help="title,description,body (default: 10,5,1)")
     query_p.add_argument("--explain", action="store_true", help="show per-field score breakdown")

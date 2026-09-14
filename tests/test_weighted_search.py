@@ -48,3 +48,26 @@ def test_no_matches_returns_empty_list(tmp_path: Path):
 
     results = search(db_path, "completely unrelated nonexistent gibberish query")
     assert results == []
+
+
+def test_custom_subdirs_for_a_different_vault_layout(tmp_path: Path):
+    # KeySix uses thinking-notes/, not notes/ -- build_index must not be hardcoded to notes/
+    vault = tmp_path / "vault"
+    thinking = vault / "thinking-notes"
+    thinking.mkdir(parents=True)
+    (thinking / "one.md").write_text("---\ndescription: d\n---\n\n# a distinctive topic\n\nbody\n")
+
+    db_path = tmp_path / "index.duckdb"
+    n = build_index(vault, db_path, subdirs=["thinking-notes"])
+    assert n == 1
+
+    results = search(db_path, "distinctive topic")
+    assert len(results) == 1
+
+
+def test_default_subdirs_still_notes_when_unspecified(tmp_path: Path):
+    vault = tmp_path / "vault"
+    _write_note(vault, "a.md", "some note", "desc", "body text")
+    db_path = tmp_path / "index.duckdb"
+    n = build_index(vault, db_path)  # no subdirs passed
+    assert n == 1

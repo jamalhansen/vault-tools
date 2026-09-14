@@ -26,9 +26,14 @@ def _strip_title_line(body: str) -> str:
     return _TITLE_RE.sub("", body, count=1)
 
 
-def build_index(vault: Path, db_path: Path) -> int:
-    """(Re)build the index. Returns the number of notes indexed."""
-    files = find_md_files(vault, subdirs=["notes"])
+def build_index(vault: Path, db_path: Path, subdirs: list[str] | None = None) -> int:
+    """(Re)build the index. Returns the number of notes indexed.
+
+    `subdirs` defaults to ["notes"] -- Contexta's layout. A vault with a different
+    layout (e.g. KeySix's thinking-notes/) must pass its own subdirs explicitly;
+    there's no vault-detection magic here.
+    """
+    files = find_md_files(vault, subdirs=subdirs or ["notes"])
 
     rows = []
     for f in files:
