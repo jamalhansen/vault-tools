@@ -1,6 +1,7 @@
+import time
 from pathlib import Path
 
-from vault_tools.weighted_search.indexer import build_index
+from vault_tools.weighted_search.indexer import build_index, check_staleness
 from vault_tools.weighted_search.search import search
 
 
@@ -71,3 +72,46 @@ def test_default_subdirs_still_notes_when_unspecified(tmp_path: Path):
     db_path = tmp_path / "index.duckdb"
     n = build_index(vault, db_path)  # no subdirs passed
     assert n == 1
+
+
+class TestCheckStaleness:
+    def test_no_index_is_stale(self, tmp_path: Path):
+        vault = tmp_path / "vault"
+        _write_note(vault, "a.md", "note", "desc", "body")
+        report = check_staleness(vault, tmp_path / "missing.duckdb")
+        assert report.index_exists is False
+        assert report.stale is True
+
+    def test_fresh_index_after_build_is_not_stale(self, tmp_path: Path):
+        vault = tmp_path / "vault"
+        _write_note(vault, "a.md", "note", "desc", "body")
+        db_path = tmp_path / "index.duckdb"
+        build_index(vault, db_path)
+
+        report = check_staleness(vault, db_path)
+        assert report.index_exists is True
+        assert report.stale is False
+        assert report.note_count == 1
+
+    def test_note_added_after_build_makes_it_stale(self, tmp_path: Path):
+        vault = tmp_path / "vault"
+        _write_note(vault, "a.md", "note", "desc", "body")
+        db_path = tmp_path / "index.duckdb"
+        build_index(vault, db_path)
+
+        time.sleep(1.1)  # ensure a distinct mtime -- filesystem mtime resolution
+        _write_note(vault, "b.md", "second note", "desc", "body")
+
+        report = check_staleness(vault, db_path)
+        assert report.stale is True
+        assert report.note_count == 2
+
+    def test_empty_vault_has_no_newest_note_but_is_not_stale_if_index_exists(self, tmp_path: Path):
+        vault = tmp_path / "empty_vault"
+        (vault / "notes").mkdir(parents=True)
+        db_path = tmp_path / "index.duckdb"
+        build_index(vault, db_path)
+
+        report = check_staleness(vault, db_path)
+        assert report.newest_note_at is None
+        assert report.stale is False

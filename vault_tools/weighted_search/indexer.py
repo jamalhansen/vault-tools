@@ -8,6 +8,8 @@ notes/column-weighted-bm25-improves-precision-for-structured-notes-by-scoring-ti
 """
 
 import re
+from dataclasses import dataclass
+from datetime import datetime
 from pathlib import Path
 
 import duckdb
@@ -52,7 +54,8 @@ def build_index(vault: Path, db_path: Path, subdirs: list[str] | None = None) ->
     con.execute("INSTALL fts")
     con.execute("LOAD fts")
     con.execute("CREATE TABLE notes (id VARCHAR, title VARCHAR, description VARCHAR, body VARCHAR)")
-    con.executemany("INSERT INTO notes VALUES (?, ?, ?, ?)", rows)
+    if rows:
+        con.executemany("INSERT INTO notes VALUES (?, ?, ?, ?)", rows)
 
     con.execute("CREATE TABLE idx_title AS SELECT id, title FROM notes")
     con.execute("CREATE TABLE idx_description AS SELECT id, description FROM notes")
@@ -64,3 +67,32 @@ def build_index(vault: Path, db_path: Path, subdirs: list[str] | None = None) ->
 
     con.close()
     return len(rows)
+
+
+@dataclass
+class StalenessReport:
+    index_exists: bool
+    index_built_at: datetime | None
+    newest_note_at: datetime | None
+    stale: bool  # True if the index predates the newest note, or doesn't exist at all
+    note_count: int
+
+
+def check_staleness(vault: Path, db_path: Path, subdirs: list[str] | None = None) -> StalenessReport:
+    """Compare the index file's mtime against the newest note's mtime.
+
+    Written 2026-09-14 after a real incident: Contexta's index sat a week stale
+    (1,173 notes at last build vs. 1,323 real) before anyone noticed, because
+    nothing ever checked -- `build` has to be run manually and nothing flagged
+    that it hadn't been.
+    """
+    files = find_md_files(vault, subdirs=subdirs or ["notes"])
+    newest = max((f.stat().st_mtime for f in files), default=None)
+    newest_dt = datetime.fromtimestamp(newest) if newest is not None else None
+
+    if not db_path.exists():
+        return StalenessReport(False, None, newest_dt, True, len(files))
+
+    built_dt = datetime.fromtimestamp(db_path.stat().st_mtime)
+    stale = newest_dt is not None and newest_dt > built_dt
+    return StalenessReport(True, built_dt, newest_dt, stale, len(files))

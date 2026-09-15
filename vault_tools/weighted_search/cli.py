@@ -2,6 +2,7 @@
 
     wsearch build [--vault PATH] [--subdirs notes] [--db PATH]
     wsearch query "..." [--db PATH] [--top N] [--weights T,D,B] [--explain]
+    wsearch status [--vault PATH] [--subdirs notes] [--db PATH]
 
 One index file per vault by default (~/.cache/vault-tools/wsearch-<vaultname>.duckdb),
 so `wsearch query` on a second vault needs --db pointed at that vault's index file --
@@ -13,7 +14,7 @@ import sys
 from pathlib import Path
 
 from vault_tools.shared.vault import resolve_vault
-from vault_tools.weighted_search.indexer import build_index
+from vault_tools.weighted_search.indexer import build_index, check_staleness
 from vault_tools.weighted_search.search import DEFAULT_WEIGHTS, search
 
 DEFAULT_DB_DIR = Path.home() / ".cache" / "vault-tools"
@@ -66,6 +67,26 @@ def _cmd_query(args: argparse.Namespace) -> None:
         print()
 
 
+def _cmd_status(args: argparse.Namespace) -> None:
+    vault = resolve_vault(args.vault)
+    db_path = Path(args.db).expanduser() if args.db else _default_db_for(vault)
+    subdirs = [s.strip() for s in args.subdirs.split(",") if s.strip()]
+    report = check_staleness(vault, db_path, subdirs=subdirs)
+
+    if not report.index_exists:
+        print(f"No index at {db_path} -- run 'wsearch build' first.")
+        raise SystemExit(1)
+
+    print(f"Index: {db_path}")
+    print(f"Built at:        {report.index_built_at.isoformat(sep=' ', timespec='minutes')}")
+    print(f"Newest note at:  {report.newest_note_at.isoformat(sep=' ', timespec='minutes') if report.newest_note_at else 'n/a'}")
+    print(f"Notes on disk:   {report.note_count}")
+    if report.stale:
+        print("STALE -- a note has changed since the index was built. Run 'wsearch build'.")
+        raise SystemExit(1)
+    print("Up to date.")
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     sub = parser.add_subparsers(dest="command", required=True)
@@ -91,6 +112,12 @@ def main() -> None:
     query_p.add_argument("--weights", default=None, help="title,description,body (default: 10,5,1)")
     query_p.add_argument("--explain", action="store_true", help="show per-field score breakdown")
     query_p.set_defaults(func=_cmd_query)
+
+    status_p = sub.add_parser("status", help="check index freshness against the vault's newest note")
+    status_p.add_argument("--vault", default=None, help="vault path (default: $VAULT_PATH or ~/vaults/Contexta)")
+    status_p.add_argument("--db", default=None, help="index file path (default: one per vault name)")
+    status_p.add_argument("--subdirs", default="notes", help="comma-separated subdirs, must match what 'build' used")
+    status_p.set_defaults(func=_cmd_status)
 
     args = parser.parse_args()
     args.func(args)
