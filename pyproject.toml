@@ -14,6 +14,7 @@ vault-digest = "vault_tools.digest.cli:main"
 tension-index = "vault_tools.tension_index.cli:main"
 vg = "vault_tools.wiki_graph.cli:main"
 wsearch = "vault_tools.weighted_search.cli:main"
+tool-doc-audit = "vault_tools.tool_doc_audit.cli:main"
 
 [build-system]
 requires = ["hatchling"]
