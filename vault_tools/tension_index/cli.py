@@ -4,6 +4,8 @@ import argparse
 import sys
 from pathlib import Path
 
+from local_first_common.tracking import timed_run
+
 from vault_tools.shared.vault import resolve_vault
 from vault_tools.tension_index.index import INDEX_PATH, read_index, write_index
 from vault_tools.tension_index.parser import format_row, parse_tension
@@ -63,10 +65,14 @@ def main() -> None:
     args = parser.parse_args()
     vault = resolve_vault(args.vault)
 
-    if args.command == "rebuild":
-        cmd_rebuild(vault, dry_run=args.dry_run, verbose=args.verbose)
-    elif args.command == "show":
-        cmd_show(vault)
+    # No LLM model involved (model=None); this just gives tension-index a
+    # heartbeat on the fleet dashboard's activity panel, which vault_tools
+    # was invisible to.
+    with timed_run("vault-tools", None, source_location=str(vault)):
+        if args.command == "rebuild":
+            cmd_rebuild(vault, dry_run=args.dry_run, verbose=args.verbose)
+        elif args.command == "show":
+            cmd_show(vault)
 
 
 if __name__ == "__main__":

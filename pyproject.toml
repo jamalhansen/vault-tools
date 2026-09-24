@@ -3,10 +3,11 @@ name = "vault-tools"
 version = "0.1.0"
 description = "Knowledge vault utilities: digest, tension index, wiki-link graph"
 readme = "README.md"
-requires-python = ">=3.11"
+requires-python = ">=3.12"
 dependencies = [
     "pyyaml>=6.0",
     "duckdb>=1.1.0",
+    "local-first-common>=0.1.0",
 ]
 
 [project.scripts]
@@ -19,6 +20,9 @@ tool-doc-audit = "vault_tools.tool_doc_audit.cli:main"
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
+
+[tool.uv.sources]
+local-first-common = { git = "https://github.com/jamalhansen/local-first-common.git", branch = "main" }
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

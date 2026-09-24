@@ -2,6 +2,8 @@
 
 import argparse
 
+from local_first_common.tracking import timed_run
+
 from vault_tools.shared.vault import resolve_vault
 from vault_tools.wiki_graph.builder import build_graph, get_graph, save_graph
 from vault_tools.wiki_graph.queries import get_backlinks, get_broken, get_members, get_orphans
@@ -36,62 +38,67 @@ def main() -> None:
     args = parser.parse_args()
     vault = resolve_vault(args.vault)
 
-    if args.command == "build":
-        graph = build_graph(vault, verbose=args.verbose)
-        save_graph(vault, graph)
-        note_count = len(graph["file_index"])
-        link_count = sum(len(v) for v in graph["outgoing"].values())
-        print(f"Done. Processed: {note_count} notes, {link_count} links")
-        return
+    # No LLM model involved (model=None); this just gives vg a heartbeat on
+    # the fleet dashboard's activity panel, which vault_tools was invisible to.
+    with timed_run("vault-tools", None, source_location=str(vault)) as run:
+        if args.command == "build":
+            graph = build_graph(vault, verbose=args.verbose)
+            save_graph(vault, graph)
+            note_count = len(graph["file_index"])
+            link_count = sum(len(v) for v in graph["outgoing"].values())
+            run.item_count = note_count
+            print(f"Done. Processed: {note_count} notes, {link_count} links")
+            return
 
-    no_cache = getattr(args, "no_cache", False)
-    if no_cache:
-        graph = build_graph(vault, verbose=args.verbose)
-    else:
-        graph = get_graph(vault, verbose=args.verbose)
-
-    outgoing = graph["outgoing"]
-    file_index = graph["file_index"]
-    map_notes = graph["map_notes"]
-
-    if args.command == "orphans":
-        orphans = get_orphans(outgoing, file_index, map_notes)
-        if not orphans:
-            print("No orphans found.")
+        no_cache = getattr(args, "no_cache", False)
+        if no_cache:
+            graph = build_graph(vault, verbose=args.verbose)
         else:
-            for slug in orphans:
-                path = file_index.get(slug, "?")
-                print(f"{slug}  ({path})")
-            print(f"\nDone. Found: {len(orphans)} orphans")
+            graph = get_graph(vault, verbose=args.verbose)
 
-    elif args.command == "broken":
-        pairs = get_broken(outgoing, file_index)
-        if not pairs:
-            print("No broken links found.")
-        else:
-            for source, target in pairs:
-                print(f"{source}  ->  [[{target}]]")
-            print(f"\nDone. Found: {len(pairs)} broken links")
+        outgoing = graph["outgoing"]
+        file_index = graph["file_index"]
+        map_notes = graph["map_notes"]
+        run.item_count = len(file_index)
 
-    elif args.command == "backlinks":
-        sources = get_backlinks(args.note, outgoing)
-        if not sources:
-            print(f"No backlinks found for: {args.note}")
-        else:
-            for s in sources:
-                path = file_index.get(s, "?")
-                print(f"{s}  ({path})")
-            print(f"\nDone. Found: {len(sources)} backlinks")
+        if args.command == "orphans":
+            orphans = get_orphans(outgoing, file_index, map_notes)
+            if not orphans:
+                print("No orphans found.")
+            else:
+                for slug in orphans:
+                    path = file_index.get(slug, "?")
+                    print(f"{slug}  ({path})")
+                print(f"\nDone. Found: {len(orphans)} orphans")
 
-    elif args.command == "members":
-        members = get_members(args.map, outgoing, file_index)
-        if not members:
-            print(f"No members found for map: {args.map}")
-        else:
-            for slug in members:
-                path = file_index.get(slug, "?")
-                print(f"{slug}  ({path})")
-            print(f"\nDone. Found: {len(members)} members")
+        elif args.command == "broken":
+            pairs = get_broken(outgoing, file_index)
+            if not pairs:
+                print("No broken links found.")
+            else:
+                for source, target in pairs:
+                    print(f"{source}  ->  [[{target}]]")
+                print(f"\nDone. Found: {len(pairs)} broken links")
+
+        elif args.command == "backlinks":
+            sources = get_backlinks(args.note, outgoing)
+            if not sources:
+                print(f"No backlinks found for: {args.note}")
+            else:
+                for s in sources:
+                    path = file_index.get(s, "?")
+                    print(f"{s}  ({path})")
+                print(f"\nDone. Found: {len(sources)} backlinks")
+
+        elif args.command == "members":
+            members = get_members(args.map, outgoing, file_index)
+            if not members:
+                print(f"No members found for map: {args.map}")
+            else:
+                for slug in members:
+                    path = file_index.get(slug, "?")
+                    print(f"{slug}  ({path})")
+                print(f"\nDone. Found: {len(members)} members")
 
 
 if __name__ == "__main__":

@@ -13,6 +13,8 @@ import argparse
 import sys
 from pathlib import Path
 
+from local_first_common.tracking import timed_run
+
 from vault_tools.shared.vault import resolve_vault
 from vault_tools.weighted_search.indexer import build_index, check_staleness
 from vault_tools.weighted_search.search import DEFAULT_WEIGHTS, search
@@ -120,7 +122,12 @@ def main() -> None:
     status_p.set_defaults(func=_cmd_status)
 
     args = parser.parse_args()
-    args.func(args)
+    # No LLM model involved (model=None); this just gives wsearch a heartbeat
+    # on the fleet dashboard's activity panel, which vault_tools was
+    # invisible to. Source location is whichever --db/--vault the subcommand
+    # itself resolved, so it's set from inside args.func rather than here.
+    with timed_run("vault-tools", None, source_location=getattr(args, "db", None) or getattr(args, "vault", None)):
+        args.func(args)
 
 
 if __name__ == "__main__":
