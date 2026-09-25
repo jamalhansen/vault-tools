@@ -2,7 +2,6 @@
 
 from pathlib import Path
 
-
 from vault_tools.tension_index.index import read_index, write_index
 from vault_tools.tension_index.parser import format_row, parse_tension
 

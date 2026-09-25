@@ -3,11 +3,10 @@
 import csv
 import json
 import re
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta
 from pathlib import Path
 
 from local_first_common.obsidian import parse_frontmatter
-
 
 _THREAD_RE = re.compile(r"^- \*\*(.+?)\*\*(?:\s+\[[^\]]*\])?\s+--\s+(.+)$")
 _REMINDER_RE = re.compile(r"^- \[ \] (\d{4}-\d{2}-\d{2}):\s+(.+)$")
@@ -140,7 +139,7 @@ def get_due_reminders(vault: Path, days: int = 7) -> list[tuple[str, str]]:
     if not reminders_path.exists():
         return []
 
-    today = date.today()
+    today = datetime.now().astimezone().date()
     cutoff = today + timedelta(days=days)
     due = []
 
@@ -207,7 +206,7 @@ def append_session_log(vault: Path, counts: dict[str, int], orphan_count: int | 
         if write_header:
             writer.writeheader()
         writer.writerow({
-            "date": date.today().isoformat(),
+            "date": datetime.now().astimezone().date().isoformat(),
             "inbox": counts.get("inbox", 0),
             "tensions": counts.get("tensions", 0),
             "observations": counts.get("observations", 0),
@@ -221,7 +220,7 @@ def build_digest(
     byte_budget: int = BYTE_BUDGET,
 ) -> str:
     """Assemble the full digest markdown string, capped to `byte_budget`."""
-    today = date.today().isoformat()
+    today = datetime.now().astimezone().date().isoformat()
     threads = get_active_threads(vault)
     counts = get_pending_counts(vault)
     reminders = get_due_reminders(vault)

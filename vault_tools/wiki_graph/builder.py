@@ -57,7 +57,7 @@ def save_graph(vault: Path, graph: dict) -> None:
     """Write graph to ops/link-graph.json."""
     from datetime import datetime
 
-    graph["built_at"] = datetime.now().isoformat()
+    graph["built_at"] = datetime.now().astimezone().isoformat()
     cache_path = vault / GRAPH_CACHE_PATH
     cache_path.parent.mkdir(parents=True, exist_ok=True)
     cache_path.write_text(json.dumps(graph, indent=2), encoding="utf-8")

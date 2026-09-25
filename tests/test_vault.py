@@ -2,7 +2,6 @@
 
 from pathlib import Path
 
-
 from vault_tools.shared.vault import find_md_files
 from vault_tools.shared.wiki_links import extract_links, slugify
 

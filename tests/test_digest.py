@@ -2,7 +2,6 @@
 
 from pathlib import Path
 
-
 from vault_tools.digest.builder import (
     BYTE_BUDGET,
     STATUS_LIMIT,

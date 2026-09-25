@@ -13,7 +13,6 @@ from datetime import datetime
 from pathlib import Path
 
 import duckdb
-
 from local_first_common.obsidian import parse_frontmatter, read_body
 
 from vault_tools.shared.vault import find_md_files
@@ -90,11 +89,11 @@ def check_staleness(vault: Path, db_path: Path, subdirs: list[str] | None = None
     """
     files = find_md_files(vault, subdirs=subdirs or ["notes"])
     newest = max((f.stat().st_mtime for f in files), default=None)
-    newest_dt = datetime.fromtimestamp(newest) if newest is not None else None
+    newest_dt = datetime.fromtimestamp(newest) if newest is not None else None  # noqa: DTZ006 - local wall-clock mtimes, compared and printed locally
 
     if not db_path.exists():
         return StalenessReport(False, None, newest_dt, True, len(files))
 
-    built_dt = datetime.fromtimestamp(db_path.stat().st_mtime)
+    built_dt = datetime.fromtimestamp(db_path.stat().st_mtime)  # noqa: DTZ006 - local wall-clock mtime, see above
     stale = newest_dt is not None and newest_dt > built_dt
     return StalenessReport(True, built_dt, newest_dt, stale, len(files))

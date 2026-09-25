@@ -4,7 +4,6 @@ import os
 import sys
 from pathlib import Path
 
-
 DEFAULT_VAULT = os.environ.get("VAULT_PATH", str(Path.home() / "vaults" / "Contexta"))
 
 
