@@ -14,7 +14,9 @@ from pathlib import Path
 
 import duckdb
 
-from vault_tools.shared.vault import find_md_files, parse_frontmatter, read_body
+from local_first_common.obsidian import parse_frontmatter, read_body
+
+from vault_tools.shared.vault import find_md_files
 
 _TITLE_RE = re.compile(r"^#\s+(.+)$", re.MULTILINE)
 

@@ -6,6 +6,8 @@ import re
 from datetime import date, timedelta
 from pathlib import Path
 
+from local_first_common.obsidian import parse_frontmatter
+
 
 _THREAD_RE = re.compile(r"^- \*\*(.+?)\*\*(?:\s+\[[^\]]*\])?\s+--\s+(.+)$")
 _REMINDER_RE = re.compile(r"^- \[ \] (\d{4}-\d{2}-\d{2}):\s+(.+)$")
@@ -79,18 +81,9 @@ def get_active_threads(vault: Path) -> list[tuple[str, str]]:
     return threads
 
 
-_STATUS_RE = re.compile(r"^status:\s*(\S+)", re.MULTILINE)
-
-
 def _frontmatter_status(path: Path) -> str | None:
-    text = path.read_text(encoding="utf-8", errors="replace")
-    if not text.startswith("---"):
-        return None
-    end = text.find("\n---", 3)
-    if end == -1:
-        return None
-    m = _STATUS_RE.search(text[:end])
-    return m.group(1) if m else None
+    status = parse_frontmatter(path).get("status")
+    return str(status) if status is not None else None
 
 
 def get_pending_counts(vault: Path) -> dict[str, int]:

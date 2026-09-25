@@ -3,7 +3,7 @@
 import re
 from pathlib import Path
 
-from vault_tools.shared.vault import parse_frontmatter
+from local_first_common.obsidian import parse_frontmatter
 
 _BRACKET_RE = re.compile(r"^\[\[(.+)\]\]$")
 

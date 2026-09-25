@@ -3,7 +3,9 @@
 import json
 from pathlib import Path
 
-from vault_tools.shared.vault import find_md_files, parse_frontmatter
+from local_first_common.obsidian import parse_frontmatter
+
+from vault_tools.shared.vault import find_md_files
 from vault_tools.shared.wiki_links import extract_links, slugify
 
 GRAPH_CACHE_PATH = "ops/link-graph.json"

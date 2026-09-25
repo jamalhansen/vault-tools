@@ -5,7 +5,6 @@ description = "Knowledge vault utilities: digest, tension index, wiki-link graph
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
-    "pyyaml>=6.0",
     "duckdb>=1.1.0",
     "local-first-common>=0.1.0",
 ]

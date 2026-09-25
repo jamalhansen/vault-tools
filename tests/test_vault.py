@@ -3,38 +3,10 @@
 from pathlib import Path
 
 
-from vault_tools.shared.vault import find_md_files, parse_frontmatter, read_body
+from vault_tools.shared.vault import find_md_files
 from vault_tools.shared.wiki_links import extract_links, slugify
 
 FIXTURES = Path(__file__).parent / "fixtures"
-
-
-class TestParseFrontmatter:
-    def test_parses_valid_frontmatter(self):
-        fm = parse_frontmatter(FIXTURES / "notes" / "note-alpha.md")
-        assert fm["type"] == "note"
-        assert fm["domain"] == "ai-tools"
-        assert fm["description"] == "Alpha is the first note"
-
-    def test_returns_empty_for_no_frontmatter(self, tmp_path):
-        f = tmp_path / "plain.md"
-        f.write_text("# Just a heading\n\nNo frontmatter.")
-        assert parse_frontmatter(f) == {}
-
-    def test_returns_empty_for_missing_file(self, tmp_path):
-        assert parse_frontmatter(tmp_path / "nonexistent.md") == {}
-
-
-class TestReadBody:
-    def test_returns_body_after_frontmatter(self):
-        body = read_body(FIXTURES / "notes" / "note-alpha.md")
-        assert "# Note Alpha" in body
-        assert "description:" not in body
-
-    def test_returns_full_text_without_frontmatter(self, tmp_path):
-        f = tmp_path / "plain.md"
-        f.write_text("Just text.")
-        assert read_body(f) == "Just text."
 
 
 class TestFindMdFiles:

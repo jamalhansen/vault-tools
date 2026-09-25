@@ -19,7 +19,7 @@ import re
 from dataclasses import dataclass
 from pathlib import Path
 
-from vault_tools.shared.vault import parse_frontmatter
+from local_first_common.obsidian import parse_frontmatter
 
 DEFAULT_TOOLS_DIR = Path.home() / "vaults" / "BrainSync" / "projects" / "local-first" / "tools"
 DEFAULT_PROJECTS_DIR = Path.home() / "projects" / "local-first"
