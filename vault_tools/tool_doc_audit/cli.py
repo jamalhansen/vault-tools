@@ -9,7 +9,7 @@ periodic check), 0 if everything documented matches reality.
 import argparse
 from pathlib import Path
 
-from local_first_common.tracking import timed_run
+from local_first_common.tracking import register_tool, timed_run
 
 from vault_tools.tool_doc_audit.checker import (
     DEFAULT_PROJECTS_DIR,
@@ -17,6 +17,8 @@ from vault_tools.tool_doc_audit.checker import (
     DEFAULT_UV_TOOLS_DIR,
     audit,
 )
+
+_TOOL = register_tool("vault-tools")
 
 
 def main() -> None:

@@ -2,11 +2,13 @@
 
 import argparse
 
-from local_first_common.tracking import timed_run
+from local_first_common.tracking import register_tool, timed_run
 
 from vault_tools.shared.vault import resolve_vault
 from vault_tools.wiki_graph.builder import build_graph, get_graph, save_graph
 from vault_tools.wiki_graph.queries import get_backlinks, get_broken, get_members, get_orphans
+
+_TOOL = register_tool("vault-tools")
 
 
 def main() -> None:
