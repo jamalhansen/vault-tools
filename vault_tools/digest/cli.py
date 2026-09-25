@@ -3,7 +3,7 @@
 import argparse
 import sys
 
-from local_first_common.tracking import register_tool, timed_run
+from local_first_common.tracking import timed_run
 
 from vault_tools.digest.builder import (
     append_session_log,
@@ -12,8 +12,6 @@ from vault_tools.digest.builder import (
     get_pending_counts,
 )
 from vault_tools.shared.vault import resolve_vault
-
-_TOOL = register_tool("vault-tools")
 
 DIGEST_PATH = "ops/digest.md"
 

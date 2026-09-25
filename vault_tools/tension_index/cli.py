@@ -4,13 +4,11 @@ import argparse
 import sys
 from pathlib import Path
 
-from local_first_common.tracking import register_tool, timed_run
+from local_first_common.tracking import timed_run
 
 from vault_tools.shared.vault import resolve_vault
 from vault_tools.tension_index.index import INDEX_PATH, read_index, write_index
 from vault_tools.tension_index.parser import format_row, parse_tension
-
-_TOOL = register_tool("vault-tools")
 
 
 def cmd_rebuild(vault: Path, dry_run: bool, verbose: bool) -> None:

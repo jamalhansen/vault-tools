@@ -13,13 +13,11 @@ import argparse
 import sys
 from pathlib import Path
 
-from local_first_common.tracking import register_tool, timed_run
+from local_first_common.tracking import timed_run
 
 from vault_tools.shared.vault import resolve_vault
 from vault_tools.weighted_search.indexer import build_index, check_staleness
 from vault_tools.weighted_search.search import DEFAULT_WEIGHTS, search
-
-_TOOL = register_tool("vault-tools")
 
 DEFAULT_DB_DIR = Path.home() / ".cache" / "vault-tools"
 
