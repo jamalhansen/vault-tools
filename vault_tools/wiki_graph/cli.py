@@ -1,105 +1,110 @@
 """vg -- wiki-link graph CLI."""
 
-import argparse
+from typing import Annotated
 
+import typer
 from local_first_common.tracking import timed_run
 
 from vault_tools.shared.vault import resolve_vault
 from vault_tools.wiki_graph.builder import build_graph, get_graph, save_graph
 from vault_tools.wiki_graph.queries import get_backlinks, get_broken, get_members, get_orphans
 
+app = typer.Typer(help="Query the vault wiki-link graph.", add_completion=False)
+NoCache = Annotated[bool, typer.Option("--no-cache", help="Force live scan")]
 
-def main() -> None:
-    parser = argparse.ArgumentParser(
-        prog="vg",
-        description="Query the vault wiki-link graph.",
-    )
-    parser.add_argument("--vault", "-v", default=None, help="Path to vault")
-    parser.add_argument("--verbose", action="store_true", help="Show extra detail")
 
-    sub = parser.add_subparsers(dest="command", required=True)
+@app.callback()
+def _root(
+    ctx: typer.Context,
+    vault: Annotated[str | None, typer.Option("--vault", "-v", help="Path to vault")] = None,
+    verbose: Annotated[bool, typer.Option("--verbose", help="Show extra detail")] = False,
+) -> None:
+    """Query the vault wiki-link graph."""
+    ctx.obj = {"vault": resolve_vault(vault), "verbose": verbose}
 
-    sub.add_parser("build", help="Build and cache the graph to ops/link-graph.json")
 
-    orphans_p = sub.add_parser("orphans", help="Notes with no incoming links and not in any map")
-    orphans_p.add_argument("--no-cache", action="store_true", help="Force live scan")
+def _graph(ctx: typer.Context, no_cache: bool):
+    vault, verbose = ctx.obj["vault"], ctx.obj["verbose"]
+    return build_graph(vault, verbose=verbose) if no_cache else get_graph(vault, verbose=verbose)
 
-    broken_p = sub.add_parser("broken", help="Outgoing links whose target file does not exist")
-    broken_p.add_argument("--no-cache", action="store_true")
 
-    backlinks_p = sub.add_parser("backlinks", help="Notes that link to a given note")
-    backlinks_p.add_argument("note", help="Note title or slug")
-    backlinks_p.add_argument("--no-cache", action="store_true")
+def _print_slugs(slugs, file_index, empty: str, label: str) -> None:
+    if not slugs:
+        print(empty)
+        return
+    for slug in slugs:
+        print(f"{slug}  ({file_index.get(slug, '?')})")
+    print(f"\nDone. Found: {len(slugs)} {label}")
 
-    members_p = sub.add_parser("members", help="Notes linked from a map")
-    members_p.add_argument("--map", "-m", required=True, help="Map name (e.g. ai-tools-map)")
-    members_p.add_argument("--no-cache", action="store_true")
 
-    args = parser.parse_args()
-    vault = resolve_vault(args.vault)
+# No LLM model involved (model=None); each command gives vg a heartbeat on the
+# fleet dashboard's activity panel, which vault_tools was invisible to.
 
-    # No LLM model involved (model=None); this just gives vg a heartbeat on
-    # the fleet dashboard's activity panel, which vault_tools was invisible to.
+
+@app.command()
+def build(ctx: typer.Context) -> None:
+    """Build and cache the graph to ops/link-graph.json."""
+    vault = ctx.obj["vault"]
     with timed_run("vault-tools", None, source_location=str(vault)) as run:
-        if args.command == "build":
-            graph = build_graph(vault, verbose=args.verbose)
-            save_graph(vault, graph)
-            note_count = len(graph["file_index"])
-            link_count = sum(len(v) for v in graph["outgoing"].values())
-            run.item_count = note_count
-            print(f"Done. Processed: {note_count} notes, {link_count} links")
+        graph = build_graph(vault, verbose=ctx.obj["verbose"])
+        save_graph(vault, graph)
+        note_count = len(graph["file_index"])
+        link_count = sum(len(v) for v in graph["outgoing"].values())
+        run.item_count = note_count
+        print(f"Done. Processed: {note_count} notes, {link_count} links")
+
+
+@app.command()
+def orphans(ctx: typer.Context, no_cache: NoCache = False) -> None:
+    """Notes with no incoming links and not in any map."""
+    with timed_run("vault-tools", None, source_location=str(ctx.obj["vault"])) as run:
+        g = _graph(ctx, no_cache)
+        run.item_count = len(g["file_index"])
+        _print_slugs(get_orphans(g["outgoing"], g["file_index"], g["map_notes"]), g["file_index"],
+                     "No orphans found.", "orphans")
+
+
+@app.command()
+def broken(ctx: typer.Context, no_cache: NoCache = False) -> None:
+    """Outgoing links whose target file does not exist."""
+    with timed_run("vault-tools", None, source_location=str(ctx.obj["vault"])) as run:
+        g = _graph(ctx, no_cache)
+        run.item_count = len(g["file_index"])
+        pairs = get_broken(g["outgoing"], g["file_index"])
+        if not pairs:
+            print("No broken links found.")
             return
+        for source, target in pairs:
+            print(f"{source}  ->  [[{target}]]")
+        print(f"\nDone. Found: {len(pairs)} broken links")
 
-        no_cache = getattr(args, "no_cache", False)
-        if no_cache:
-            graph = build_graph(vault, verbose=args.verbose)
-        else:
-            graph = get_graph(vault, verbose=args.verbose)
 
-        outgoing = graph["outgoing"]
-        file_index = graph["file_index"]
-        map_notes = graph["map_notes"]
-        run.item_count = len(file_index)
+@app.command()
+def backlinks(
+    ctx: typer.Context,
+    note: Annotated[str, typer.Argument(help="Note title or slug")],
+    no_cache: NoCache = False,
+) -> None:
+    """Notes that link to a given note."""
+    with timed_run("vault-tools", None, source_location=str(ctx.obj["vault"])) as run:
+        g = _graph(ctx, no_cache)
+        run.item_count = len(g["file_index"])
+        _print_slugs(get_backlinks(note, g["outgoing"]), g["file_index"], f"No backlinks found for: {note}", "backlinks")
 
-        if args.command == "orphans":
-            orphans = get_orphans(outgoing, file_index, map_notes)
-            if not orphans:
-                print("No orphans found.")
-            else:
-                for slug in orphans:
-                    path = file_index.get(slug, "?")
-                    print(f"{slug}  ({path})")
-                print(f"\nDone. Found: {len(orphans)} orphans")
 
-        elif args.command == "broken":
-            pairs = get_broken(outgoing, file_index)
-            if not pairs:
-                print("No broken links found.")
-            else:
-                for source, target in pairs:
-                    print(f"{source}  ->  [[{target}]]")
-                print(f"\nDone. Found: {len(pairs)} broken links")
-
-        elif args.command == "backlinks":
-            sources = get_backlinks(args.note, outgoing)
-            if not sources:
-                print(f"No backlinks found for: {args.note}")
-            else:
-                for s in sources:
-                    path = file_index.get(s, "?")
-                    print(f"{s}  ({path})")
-                print(f"\nDone. Found: {len(sources)} backlinks")
-
-        elif args.command == "members":
-            members = get_members(args.map, outgoing, file_index)
-            if not members:
-                print(f"No members found for map: {args.map}")
-            else:
-                for slug in members:
-                    path = file_index.get(slug, "?")
-                    print(f"{slug}  ({path})")
-                print(f"\nDone. Found: {len(members)} members")
+@app.command()
+def members(
+    ctx: typer.Context,
+    map_name: Annotated[str, typer.Option("--map", "-m", help="Map name (e.g. ai-tools-map)")],
+    no_cache: NoCache = False,
+) -> None:
+    """Notes linked from a map."""
+    with timed_run("vault-tools", None, source_location=str(ctx.obj["vault"])) as run:
+        g = _graph(ctx, no_cache)
+        run.item_count = len(g["file_index"])
+        _print_slugs(get_members(map_name, g["outgoing"], g["file_index"]), g["file_index"],
+                     f"No members found for map: {map_name}", "members")
 
 
 if __name__ == "__main__":
-    main()
+    app()

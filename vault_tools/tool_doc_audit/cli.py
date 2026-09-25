@@ -6,9 +6,10 @@ Exit code is 1 if any mismatch is found (so it can slot into job-health or a
 periodic check), 0 if everything documented matches reality.
 """
 
-import argparse
 from pathlib import Path
+from typing import Annotated
 
+import typer
 from local_first_common.tracking import timed_run
 
 from vault_tools.tool_doc_audit.checker import (
@@ -18,24 +19,26 @@ from vault_tools.tool_doc_audit.checker import (
     audit,
 )
 
+app = typer.Typer(help=__doc__, add_completion=False)
 
-def main() -> None:
-    parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument("--tools-dir", default=str(DEFAULT_TOOLS_DIR))
-    parser.add_argument("--projects-dir", default=str(DEFAULT_PROJECTS_DIR))
-    parser.add_argument("--uv-tools-dir", default=str(DEFAULT_UV_TOOLS_DIR))
-    args = parser.parse_args()
 
+@app.command()
+def main(
+    tools_dir: Annotated[str, typer.Option("--tools-dir")] = str(DEFAULT_TOOLS_DIR),
+    projects_dir: Annotated[str, typer.Option("--projects-dir")] = str(DEFAULT_PROJECTS_DIR),
+    uv_tools_dir: Annotated[str, typer.Option("--uv-tools-dir")] = str(DEFAULT_UV_TOOLS_DIR),
+) -> None:
+    """Cross-reference the local-first tool docs against real disk state. Exits 1 on any mismatch."""
     # No LLM model involved (model=None); this just gives tool-doc-audit a
     # heartbeat on the fleet dashboard's activity panel, which vault_tools
     # was invisible to. Findings are computed inside the block (a real run
     # succeeded) but the exit-1-on-findings below happens after it, so
     # "found mismatches" isn't logged as a tracking failure.
-    with timed_run("vault-tools", None, source_location=args.tools_dir) as run:
+    with timed_run("vault-tools", None, source_location=tools_dir) as run:
         findings = audit(
-            Path(args.tools_dir).expanduser(),
-            Path(args.projects_dir).expanduser(),
-            Path(args.uv_tools_dir).expanduser(),
+            Path(tools_dir).expanduser(),
+            Path(projects_dir).expanduser(),
+            Path(uv_tools_dir).expanduser(),
         )
         run.item_count = len(findings)
 
@@ -51,8 +54,8 @@ def main() -> None:
         print()
 
     print(f"{len(findings)} mismatch(es) found.")
-    raise SystemExit(1)
+    raise typer.Exit(1)
 
 
 if __name__ == "__main__":
-    main()
+    app()

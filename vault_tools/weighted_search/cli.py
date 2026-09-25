@@ -9,10 +9,11 @@ so `wsearch query` on a second vault needs --db pointed at that vault's index fi
 there's no vault-detection at query time, only at build time.
 """
 
-import argparse
 import sys
 from pathlib import Path
+from typing import Annotated
 
+import typer
 from local_first_common.tracking import timed_run
 
 from vault_tools.shared.vault import resolve_vault
@@ -28,107 +29,114 @@ def _default_db_for(vault: Path) -> Path:
     return DEFAULT_DB_DIR / f"wsearch-{vault.name.lower()}.duckdb"
 
 
-def _cmd_build(args: argparse.Namespace) -> None:
-    vault = resolve_vault(args.vault)
-    db_path = Path(args.db).expanduser() if args.db else _default_db_for(vault)
-    db_path.parent.mkdir(parents=True, exist_ok=True)
-    subdirs = [s.strip() for s in args.subdirs.split(",") if s.strip()]
-    n = build_index(vault, db_path, subdirs=subdirs)
-    print(f"Indexed {n} notes from {vault} ({', '.join(subdirs)}) -> {db_path}")
+app = typer.Typer(help=__doc__, add_completion=False)
+VaultOption = Annotated[
+    str | None, typer.Option("--vault", help="vault path (default: $VAULT_PATH or ~/vaults/Contexta)")
+]
 
 
-def _cmd_query(args: argparse.Namespace) -> None:
-    db_path = Path(args.db).expanduser()
-    weights = DEFAULT_WEIGHTS
-    if args.weights:
-        parts = [float(x) for x in args.weights.split(",")]
-        if len(parts) != 3:
-            print("error: --weights needs exactly 3 comma-separated numbers (title,description,body)", file=sys.stderr)
-            raise SystemExit(1)
-        weights = tuple(parts)
-
-    try:
-        results = search(db_path, args.query, top=args.top, weights=weights)
-    except FileNotFoundError as e:
-        print(f"error: {e}", file=sys.stderr)
-        raise SystemExit(1)
-
-    if not results:
-        print("No matches.")
-        return
-
-    for r in results:
-        print(f"{r.weighted_score:7.2f}  {r.id}")
-        print(f"          {r.title}")
-        if args.explain:
-            print(
-                f"          (title={r.title_score:.3f}*{weights[0]:g}, "
-                f"description={r.description_score:.3f}*{weights[1]:g}, "
-                f"body={r.body_score:.3f}*{weights[2]:g})"
-            )
-        print()
+@app.callback()
+def _root() -> None:
+    """Column-weighted BM25 search over vault notes."""
 
 
-def _cmd_status(args: argparse.Namespace) -> None:
-    vault = resolve_vault(args.vault)
-    db_path = Path(args.db).expanduser() if args.db else _default_db_for(vault)
-    subdirs = [s.strip() for s in args.subdirs.split(",") if s.strip()]
-    report = check_staleness(vault, db_path, subdirs=subdirs)
-
-    if not report.index_exists:
-        print(f"No index at {db_path} -- run 'wsearch build' first.")
-        raise SystemExit(1)
-
-    print(f"Index: {db_path}")
-    print(f"Built at:        {report.index_built_at.isoformat(sep=' ', timespec='minutes')}")
-    print(f"Newest note at:  {report.newest_note_at.isoformat(sep=' ', timespec='minutes') if report.newest_note_at else 'n/a'}")
-    print(f"Notes on disk:   {report.note_count}")
-    if report.stale:
-        print("STALE -- a note has changed since the index was built. Run 'wsearch build'.")
-        raise SystemExit(1)
-    print("Up to date.")
+# No LLM model involved (model=None); each command gives wsearch a heartbeat on the
+# fleet dashboard's activity panel, which vault_tools was invisible to.
 
 
-def main() -> None:
-    parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    sub = parser.add_subparsers(dest="command", required=True)
+@app.command()
+def build(
+    vault: VaultOption = None,
+    db: Annotated[str | None, typer.Option("--db", help="index file path (default: one per vault name)")] = None,
+    subdirs: Annotated[
+        str,
+        typer.Option(
+            "--subdirs",
+            help="comma-separated subdirs to index, relative to --vault (default: notes -- "
+                 "e.g. Contexta uses notes/, a vault with a different layout like KeySix's "
+                 "thinking-notes/ needs this set explicitly)",
+        ),
+    ] = "notes",
+) -> None:
+    """Build or rebuild the index."""
+    with timed_run("vault-tools", None, source_location=db or vault):
+        vault_path = resolve_vault(vault)
+        db_path = Path(db).expanduser() if db else _default_db_for(vault_path)
+        db_path.parent.mkdir(parents=True, exist_ok=True)
+        dirs = [s.strip() for s in subdirs.split(",") if s.strip()]
+        n = build_index(vault_path, db_path, subdirs=dirs)
+        print(f"Indexed {n} notes from {vault_path} ({', '.join(dirs)}) -> {db_path}")
 
-    build_p = sub.add_parser("build", help="build or rebuild the index")
-    build_p.add_argument("--vault", default=None, help="vault path (default: $VAULT_PATH or ~/vaults/Contexta)")
-    build_p.add_argument("--db", default=None, help="index file path (default: one per vault name, see module docstring)")
-    build_p.add_argument(
-        "--subdirs", default="notes",
-        help="comma-separated subdirs to index, relative to --vault (default: notes -- "
-             "e.g. Contexta uses notes/, a vault with a different layout like KeySix's "
-             "thinking-notes/ needs this set explicitly)",
-    )
-    build_p.set_defaults(func=_cmd_build)
 
-    query_p = sub.add_parser("query", help="run a weighted BM25 query")
-    query_p.add_argument("query")
-    query_p.add_argument(
-        "--db", default=str(_default_db_for(Path.home() / "vaults" / "Contexta")),
-        help="index file path (default: Contexta's index -- pass explicitly for any other vault)",
-    )
-    query_p.add_argument("--top", type=int, default=10)
-    query_p.add_argument("--weights", default=None, help="title,description,body (default: 10,5,1)")
-    query_p.add_argument("--explain", action="store_true", help="show per-field score breakdown")
-    query_p.set_defaults(func=_cmd_query)
+@app.command()
+def query(
+    query: Annotated[str, typer.Argument()],
+    db: Annotated[
+        str, typer.Option("--db", help="index file path (default: Contexta's index -- pass explicitly for any other vault)")
+    ] = str(_default_db_for(Path.home() / "vaults" / "Contexta")),
+    top: Annotated[int, typer.Option("--top")] = 10,
+    weights_arg: Annotated[str | None, typer.Option("--weights", help="title,description,body (default: 10,5,1)")] = None,
+    explain: Annotated[bool, typer.Option("--explain", help="show per-field score breakdown")] = False,
+) -> None:
+    """Run a weighted BM25 query."""
+    with timed_run("vault-tools", None, source_location=db):
+        db_path = Path(db).expanduser()
+        weights = DEFAULT_WEIGHTS
+        if weights_arg:
+            parts = [float(x) for x in weights_arg.split(",")]
+            if len(parts) != 3:
+                print("error: --weights needs exactly 3 comma-separated numbers (title,description,body)", file=sys.stderr)
+                raise typer.Exit(1)
+            weights = tuple(parts)
 
-    status_p = sub.add_parser("status", help="check index freshness against the vault's newest note")
-    status_p.add_argument("--vault", default=None, help="vault path (default: $VAULT_PATH or ~/vaults/Contexta)")
-    status_p.add_argument("--db", default=None, help="index file path (default: one per vault name)")
-    status_p.add_argument("--subdirs", default="notes", help="comma-separated subdirs, must match what 'build' used")
-    status_p.set_defaults(func=_cmd_status)
+        try:
+            results = search(db_path, query, top=top, weights=weights)
+        except FileNotFoundError as e:
+            print(f"error: {e}", file=sys.stderr)
+            raise typer.Exit(1) from e
 
-    args = parser.parse_args()
-    # No LLM model involved (model=None); this just gives wsearch a heartbeat
-    # on the fleet dashboard's activity panel, which vault_tools was
-    # invisible to. Source location is whichever --db/--vault the subcommand
-    # itself resolved, so it's set from inside args.func rather than here.
-    with timed_run("vault-tools", None, source_location=getattr(args, "db", None) or getattr(args, "vault", None)):
-        args.func(args)
+        if not results:
+            print("No matches.")
+            return
+
+        for r in results:
+            print(f"{r.weighted_score:7.2f}  {r.id}")
+            print(f"          {r.title}")
+            if explain:
+                print(
+                    f"          (title={r.title_score:.3f}*{weights[0]:g}, "
+                    f"description={r.description_score:.3f}*{weights[1]:g}, "
+                    f"body={r.body_score:.3f}*{weights[2]:g})"
+                )
+            print()
+
+
+@app.command()
+def status(
+    vault: VaultOption = None,
+    db: Annotated[str | None, typer.Option("--db", help="index file path (default: one per vault name)")] = None,
+    subdirs: Annotated[str, typer.Option("--subdirs", help="comma-separated subdirs, must match what 'build' used")] = "notes",
+) -> None:
+    """Check index freshness against the vault's newest note."""
+    with timed_run("vault-tools", None, source_location=db or vault):
+        vault_path = resolve_vault(vault)
+        db_path = Path(db).expanduser() if db else _default_db_for(vault_path)
+        dirs = [s.strip() for s in subdirs.split(",") if s.strip()]
+        report = check_staleness(vault_path, db_path, subdirs=dirs)
+
+        if not report.index_exists:
+            print(f"No index at {db_path} -- run 'wsearch build' first.")
+            raise typer.Exit(1)
+
+        print(f"Index: {db_path}")
+        print(f"Built at:        {report.index_built_at.isoformat(sep=' ', timespec='minutes')}")
+        print(f"Newest note at:  {report.newest_note_at.isoformat(sep=' ', timespec='minutes') if report.newest_note_at else 'n/a'}")
+        print(f"Notes on disk:   {report.note_count}")
+        if report.stale:
+            print("STALE -- a note has changed since the index was built. Run 'wsearch build'.")
+            raise typer.Exit(1)
+        print("Up to date.")
 
 
 if __name__ == "__main__":
-    main()
+    app()

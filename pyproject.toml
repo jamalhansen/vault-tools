@@ -7,14 +7,16 @@ requires-python = ">=3.12"
 dependencies = [
     "duckdb>=1.1.0",
     "local-first-common>=0.1.0",
+    "typer>=0.15.0",
+    "click<8.3.2",  # 8.3.2 breaks typer 0.24.1 option parsing (same pin as the rest of the fleet)
 ]
 
 [project.scripts]
-vault-digest = "vault_tools.digest.cli:main"
-tension-index = "vault_tools.tension_index.cli:main"
-vg = "vault_tools.wiki_graph.cli:main"
-wsearch = "vault_tools.weighted_search.cli:main"
-tool-doc-audit = "vault_tools.tool_doc_audit.cli:main"
+vault-digest = "vault_tools.digest.cli:app"
+tension-index = "vault_tools.tension_index.cli:app"
+vg = "vault_tools.wiki_graph.cli:app"
+wsearch = "vault_tools.weighted_search.cli:app"
+tool-doc-audit = "vault_tools.tool_doc_audit.cli:app"
 
 [build-system]
 requires = ["hatchling"]

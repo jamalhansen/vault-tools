@@ -1,8 +1,10 @@
 """vault-digest CLI -- write or show a pre-computed session summary."""
 
-import argparse
 import sys
+from enum import Enum
+from typing import Annotated
 
+import typer
 from local_first_common.tracking import timed_run
 
 from vault_tools.digest.builder import (
@@ -16,22 +18,25 @@ from vault_tools.shared.vault import resolve_vault
 DIGEST_PATH = "ops/digest.md"
 
 
-def main() -> None:
-    parser = argparse.ArgumentParser(
-        prog="vault-digest",
-        description="Generate a compact session digest from vault state.",
-    )
-    parser.add_argument(
-        "command",
-        choices=["write", "show"],
-        help="write: save to ops/digest.md; show: print to stdout",
-    )
-    parser.add_argument("--vault", "-v", default=None, help="Path to vault (default: ~/vaults/Contexta)")
-    parser.add_argument("--dry-run", "-n", action="store_true", help="Print without writing")
-    parser.add_argument("--verbose", action="store_true", help="Show extra detail")
+app = typer.Typer(help="Generate a compact session digest from vault state.", add_completion=False)
 
-    args = parser.parse_args()
-    vault = resolve_vault(args.vault)
+
+class Command(str, Enum):
+    write = "write"
+    show = "show"
+
+
+@app.command()
+def main(
+    command: Annotated[Command, typer.Argument(help="write: save to ops/digest.md; show: print to stdout")],
+    vault_path: Annotated[
+        str | None, typer.Option("--vault", "-v", help="Path to vault (default: ~/vaults/Contexta)")
+    ] = None,
+    dry_run: Annotated[bool, typer.Option("--dry-run", "-n", help="Print without writing")] = False,
+    verbose: Annotated[bool, typer.Option("--verbose", help="Show extra detail")] = False,
+) -> None:
+    """Generate a compact session digest from vault state."""
+    vault = resolve_vault(vault_path)
 
     # No LLM model involved (model=None); this just gives vault-digest a
     # heartbeat on the fleet dashboard's activity panel, which vault_tools
@@ -39,14 +44,14 @@ def main() -> None:
     with timed_run("vault-tools", None, source_location=str(vault)) as run:
         run.item_count = 4  # sections
 
-        if args.verbose:
+        if verbose:
             print(f"Vault: {vault}", file=sys.stderr)
 
         digest = build_digest(vault)
 
-        if args.command == "show" or args.dry_run:
+        if command == Command.show or dry_run:
             print(digest)
-            if args.dry_run and args.command == "write":
+            if dry_run and command == Command.write:
                 print("(dry-run: no file written)", file=sys.stderr)
             print("Done. Processed: 4 sections", file=sys.stderr)
             return
@@ -59,7 +64,7 @@ def main() -> None:
         orphan_count = get_orphan_count(vault)
         append_session_log(vault, counts, orphan_count)
 
-        if args.verbose:
+        if verbose:
             print(f"Written: {out_path}", file=sys.stderr)
             print(f"Session log: {vault / 'ops/session-log.csv'}", file=sys.stderr)
 
@@ -67,4 +72,4 @@ def main() -> None:
 
 
 if __name__ == "__main__":
-    main()
+    app()

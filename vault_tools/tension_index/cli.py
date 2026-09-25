@@ -1,9 +1,10 @@
 """tension-index CLI -- build and display the flat tension index."""
 
-import argparse
 import sys
 from pathlib import Path
+from typing import Annotated
 
+import typer
 from local_first_common.tracking import timed_run
 
 from vault_tools.shared.vault import resolve_vault
@@ -47,33 +48,35 @@ def cmd_show(vault: Path) -> None:
     print(f"\n{len(rows)} tensions indexed")
 
 
-def main() -> None:
-    parser = argparse.ArgumentParser(
-        prog="tension-index",
-        description="Build and display the flat tension index.",
-    )
-    sub = parser.add_subparsers(dest="command", required=True)
+app = typer.Typer(help="Build and display the flat tension index.", add_completion=False, no_args_is_help=False)
+VaultOption = Annotated[str | None, typer.Option("--vault", "-v")]
 
-    rebuild_p = sub.add_parser("rebuild", help="Scan ops/tensions/ and rebuild the index")
-    rebuild_p.add_argument("--vault", "-v", default=None)
-    rebuild_p.add_argument("--dry-run", "-n", action="store_true")
-    rebuild_p.add_argument("--verbose", action="store_true")
 
-    show_p = sub.add_parser("show", help="Print the current index")
-    show_p.add_argument("--vault", "-v", default=None)
+@app.callback()
+def _root() -> None:
+    """Build and display the flat tension index."""
 
-    args = parser.parse_args()
-    vault = resolve_vault(args.vault)
 
-    # No LLM model involved (model=None); this just gives tension-index a
-    # heartbeat on the fleet dashboard's activity panel, which vault_tools
-    # was invisible to.
+@app.command()
+def rebuild(
+    vault_path: VaultOption = None,
+    dry_run: Annotated[bool, typer.Option("--dry-run", "-n")] = False,
+    verbose: Annotated[bool, typer.Option("--verbose")] = False,
+) -> None:
+    """Scan ops/tensions/ and rebuild the index."""
+    vault = resolve_vault(vault_path)
+    # No LLM model involved (model=None); a heartbeat on the fleet dashboard's activity panel.
     with timed_run("vault-tools", None, source_location=str(vault)):
-        if args.command == "rebuild":
-            cmd_rebuild(vault, dry_run=args.dry_run, verbose=args.verbose)
-        elif args.command == "show":
-            cmd_show(vault)
+        cmd_rebuild(vault, dry_run=dry_run, verbose=verbose)
+
+
+@app.command()
+def show(vault_path: VaultOption = None) -> None:
+    """Print the current index."""
+    vault = resolve_vault(vault_path)
+    with timed_run("vault-tools", None, source_location=str(vault)):
+        cmd_show(vault)
 
 
 if __name__ == "__main__":
-    main()
+    app()

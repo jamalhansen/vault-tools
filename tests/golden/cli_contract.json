@@ -1,0 +1,143 @@
+{
+  "digest-bad-command": {
+    "exit": 2,
+    "stdout": ""
+  },
+  "digest-options-first": {
+    "exit": 0,
+    "stderr": "(dry-run: no file written)\nDone. Processed: 4 sections\n",
+    "stdout": "# Vault Digest\ngenerated: <DATE>\n\n## Active Threads\n- **SQL Series**: 25 posts scheduled, on autopilot through June.\n- **Blog Strategy**: monetization target May 2026.\n- **Director Promotion**: design window April 15.\n\n## Pending\n- inbox: 0 items\n- tensions: 1 pending, 2 unresolved total (incl. active)\n- observations: 1 pending\n\n## Reminders Due\n- <DATE>: Old past reminder that is overdue.\n\n## Last Health Check\n<DATE>\n\n"
+  },
+  "digest-show": {
+    "exit": 0,
+    "stderr": "Done. Processed: 4 sections\n",
+    "stdout": "# Vault Digest\ngenerated: <DATE>\n\n## Active Threads\n- **SQL Series**: 25 posts scheduled, on autopilot through June.\n- **Blog Strategy**: monetization target May 2026.\n- **Director Promotion**: design window April 15.\n\n## Pending\n- inbox: 0 items\n- tensions: 1 pending, 2 unresolved total (incl. active)\n- observations: 1 pending\n\n## Reminders Due\n- <DATE>: Old past reminder that is overdue.\n\n## Last Health Check\n<DATE>\n\n"
+  },
+  "digest-write": {
+    "exit": 0,
+    "stderr": "Vault: <TMP>/vault\nWritten: <TMP>/vault/ops/digest.md\nSession log: <TMP>/vault/ops/session-log.csv\n",
+    "stdout": "Done. Processed: 4 sections\n"
+  },
+  "digest-write-dry": {
+    "exit": 0,
+    "stderr": "(dry-run: no file written)\nDone. Processed: 4 sections\n",
+    "stdout": "# Vault Digest\ngenerated: <DATE>\n\n## Active Threads\n- **SQL Series**: 25 posts scheduled, on autopilot through June.\n- **Blog Strategy**: monetization target May 2026.\n- **Director Promotion**: design window April 15.\n\n## Pending\n- inbox: 0 items\n- tensions: 1 pending, 2 unresolved total (incl. active)\n- observations: 1 pending\n\n## Reminders Due\n- <DATE>: Old past reminder that is overdue.\n\n## Last Health Check\n<DATE>\n\n"
+  },
+  "tension-no-command": {
+    "exit": 2,
+    "stdout": ""
+  },
+  "tension-rebuild": {
+    "exit": 0,
+    "stderr": "",
+    "stdout": "Done. Processed: 3 tensions\n"
+  },
+  "tension-rebuild-dry-verbose": {
+    "exit": 0,
+    "stderr": "  tension-one.md [active]\n  tension-three-resolved.md [resolved]\n  tension-two.md [pending]\n(dry-run: 3 tensions, no file written)\n",
+    "stdout": "# filename | status | domain | notes | description\ntension-one.md | active | ai-tools | note-alpha, note-beta | Speed vs. correctness in automated pipelines\ntension-three-resolved.md | resolved | ai-tools |  | A tension that has already been resolved\ntension-two.md | pending | ai-tools |  | Local vs. cloud model tradeoffs\n\n"
+  },
+  "tension-rebuild-then-show": [
+    {
+      "exit": 0,
+      "stderr": "",
+      "stdout": "Done. Processed: 3 tensions\n"
+    },
+    {
+      "exit": 0,
+      "stderr": "",
+      "stdout": "# <TMP>/vault/ops/tension-index.md\ntension-one.md | active | ai-tools | note-alpha, note-beta | Speed vs. correctness in automated pipelines\ntension-three-resolved.md | resolved | ai-tools |  | A tension that has already been resolved\ntension-two.md | pending | ai-tools |  | Local vs. cloud model tradeoffs\n\n3 tensions indexed\n"
+    }
+  ],
+  "tension-show-empty": {
+    "exit": 0,
+    "stderr": "",
+    "stdout": "(tension index is empty -- run: tension-index rebuild)\n"
+  },
+  "tool-doc-audit-empty": {
+    "exit": 0,
+    "stderr": "",
+    "stdout": "No mismatches found.\n"
+  },
+  "vg-backlinks": {
+    "exit": 0,
+    "stderr": "",
+    "stdout": "notes-map  (notes/notes-map.md)\ntension-one  (ops/tensions/tension-one.md)\ntension-two  (ops/tensions/tension-two.md)\n\nDone. Found: 3 backlinks\n"
+  },
+  "vg-backlinks-none": {
+    "exit": 0,
+    "stderr": "",
+    "stdout": "No backlinks found for: no-such-note\n"
+  },
+  "vg-broken": {
+    "exit": 0,
+    "stderr": "",
+    "stdout": "note-alpha  ->  [[note-gamma]]\n\nDone. Found: 1 broken links\n"
+  },
+  "vg-build": {
+    "exit": 0,
+    "stderr": "",
+    "stdout": "Done. Processed: 13 notes, 9 links\n"
+  },
+  "vg-members": {
+    "exit": 0,
+    "stderr": "",
+    "stdout": "No members found for map: ai-tools-map\n"
+  },
+  "vg-members-missing-map": {
+    "exit": 2,
+    "stdout": ""
+  },
+  "vg-orphans": {
+    "exit": 0,
+    "stderr": "",
+    "stdout": "notes-map  (notes/notes-map.md)\norphan-note  (notes/orphan-note.md)\n\nDone. Found: 2 orphans\n"
+  },
+  "vg-orphans-no-cache": {
+    "exit": 0,
+    "stderr": "",
+    "stdout": "notes-map  (notes/notes-map.md)\norphan-note  (notes/orphan-note.md)\n\nDone. Found: 2 orphans\n"
+  },
+  "wsearch-bad-weights": {
+    "exit": 1,
+    "stderr": "error: --weights needs exactly 3 comma-separated numbers (title,description,body)\n",
+    "stdout": ""
+  },
+  "wsearch-build": {
+    "exit": 0,
+    "stderr": "",
+    "stdout": "Indexed 4 notes from <TMP>/vault (notes) -> <TMP>/idx.duckdb\n"
+  },
+  "wsearch-query-missing-db": {
+    "exit": 1,
+    "stderr": "error: No index at <TMP>/none.duckdb -- run 'wsearch build' first\n",
+    "stdout": ""
+  },
+  "wsearch-query-sequence": [
+    {
+      "exit": 0,
+      "stderr": "",
+      "stdout": "Indexed 4 notes from <TMP>/vault (notes) -> <TMP>/idx.duckdb\n"
+    },
+    {
+      "exit": 0,
+      "stderr": "",
+      "stdout": "   7.97  notes/note-alpha.md\n          Note Alpha\n          (title=0.523*10, description=0.548*5, body=0.000*1)\n\n   0.42  notes/notes-map.md\n          Notes Map\n          (title=0.000*10, description=0.000*5, body=0.420*1)\n\n"
+    },
+    {
+      "exit": 0,
+      "stderr": "",
+      "stdout": "No matches.\n"
+    },
+    {
+      "exit": 0,
+      "stderr": "",
+      "stdout": "Index: <TMP>/idx.duckdb\nBuilt at:        <DATE>\nNewest note at:  <DATE>\nNotes on disk:   4\nUp to date.\n"
+    }
+  ],
+  "wsearch-status-missing": {
+    "exit": 1,
+    "stderr": "",
+    "stdout": "No index at <TMP>/none.duckdb -- run 'wsearch build' first.\n"
+  }
+}
