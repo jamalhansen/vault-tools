@@ -76,14 +76,20 @@ def audit(
             where = "an installed uv tool" if uv_tool_installed else "a project directory"
             findings.append(
                 ToolFinding(
-                    doc.name, tool_number, status, github,
+                    doc.name,
+                    tool_number,
+                    status,
+                    github,
                     f"status is '{status}' but {where} named '{repo_name}' exists -- likely built and undocumented",
                 )
             )
         elif status in _BUILT_STATUSES and github and not built_evidence:
             findings.append(
                 ToolFinding(
-                    doc.name, tool_number, status, github,
+                    doc.name,
+                    tool_number,
+                    status,
+                    github,
                     f"status is '{status}' but no project directory or installed uv tool named '{repo_name}' was found",
                 )
             )
@@ -92,7 +98,10 @@ def audit(
             if github in seen_github:
                 findings.append(
                     ToolFinding(
-                        doc.name, tool_number, status, github,
+                        doc.name,
+                        tool_number,
+                        status,
+                        github,
                         f"github field is identical to {seen_github[github]} -- likely a copy/cross-wire, not two separate tools",
                     )
                 )

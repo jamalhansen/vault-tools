@@ -60,8 +60,9 @@ def orphans(ctx: typer.Context, no_cache: NoCache = False) -> None:
     with timed_run("vault-tools", None, source_location=str(ctx.obj["vault"])) as run:
         g = _graph(ctx, no_cache)
         run.item_count = len(g["file_index"])
-        _print_slugs(get_orphans(g["outgoing"], g["file_index"], g["map_notes"]), g["file_index"],
-                     "No orphans found.", "orphans")
+        _print_slugs(
+            get_orphans(g["outgoing"], g["file_index"], g["map_notes"]), g["file_index"], "No orphans found.", "orphans"
+        )
 
 
 @app.command()
@@ -89,7 +90,9 @@ def backlinks(
     with timed_run("vault-tools", None, source_location=str(ctx.obj["vault"])) as run:
         g = _graph(ctx, no_cache)
         run.item_count = len(g["file_index"])
-        _print_slugs(get_backlinks(note, g["outgoing"]), g["file_index"], f"No backlinks found for: {note}", "backlinks")
+        _print_slugs(
+            get_backlinks(note, g["outgoing"]), g["file_index"], f"No backlinks found for: {note}", "backlinks"
+        )
 
 
 @app.command()
@@ -102,8 +105,12 @@ def members(
     with timed_run("vault-tools", None, source_location=str(ctx.obj["vault"])) as run:
         g = _graph(ctx, no_cache)
         run.item_count = len(g["file_index"])
-        _print_slugs(get_members(map_name, g["outgoing"], g["file_index"]), g["file_index"],
-                     f"No members found for map: {map_name}", "members")
+        _print_slugs(
+            get_members(map_name, g["outgoing"], g["file_index"]),
+            g["file_index"],
+            f"No members found for map: {map_name}",
+            "members",
+        )
 
 
 if __name__ == "__main__":

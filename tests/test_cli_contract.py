@@ -4,6 +4,7 @@ Vault hooks and scripts call these commands by name with specific flags, so a ch
 CLI framework must not change them. Each case runs the installed script in a fresh copy
 of the fixture vault. Re-record deliberately with RECORD_CLI_CONTRACT=1.
 """
+
 import json
 import os
 import re
@@ -40,7 +41,15 @@ CASES = {
     "wsearch-status-missing": ["wsearch", "status", "--vault", "{V}", "--db", "{T}/none.duckdb"],
     "wsearch-query-missing-db": ["wsearch", "query", "alpha", "--db", "{T}/none.duckdb"],
     "wsearch-bad-weights": ["wsearch", "query", "alpha", "--db", "{T}/none.duckdb", "--weights", "1,2"],
-    "tool-doc-audit-empty": ["tool-doc-audit", "--tools-dir", "{T}/tools", "--projects-dir", "{T}", "--uv-tools-dir", "{T}"],
+    "tool-doc-audit-empty": [
+        "tool-doc-audit",
+        "--tools-dir",
+        "{T}/tools",
+        "--projects-dir",
+        "{T}",
+        "--uv-tools-dir",
+        "{T}",
+    ],
 }
 # Then, in the same temp dir as wsearch-build:
 SEQUENCES = {
@@ -67,7 +76,9 @@ def _run(argv: list[str], tmp: Path) -> dict:
     vault = tmp / "vault"
     args = [a.replace("{V}", str(vault)).replace("{T}", str(tmp)) for a in argv]
     env = {**os.environ, "LOCAL_FIRST_TRACKING_DB": str(tmp / "tracking.duckdb"), "HOME": str(tmp)}
-    proc = subprocess.run([str(BIN / args[0]), *args[1:]], capture_output=True, text=True, env=env, cwd=tmp, check=False)
+    proc = subprocess.run(
+        [str(BIN / args[0]), *args[1:]], capture_output=True, text=True, env=env, cwd=tmp, check=False
+    )
     result = {"exit": proc.returncode, "stdout": _normalize(proc.stdout, tmp)}
     if proc.returncode != 2:  # usage errors: only the exit code is part of the contract
         result["stderr"] = _normalize(proc.stderr, tmp)

@@ -102,9 +102,7 @@ class TestAppendSessionLog:
 
 class TestSummarizeStatus:
     def test_leaves_short_status_untouched(self):
-        assert summarize_status("DECIDED 2026-06-11. Execution pending.") == (
-            "DECIDED 2026-06-11. Execution pending."
-        )
+        assert summarize_status("DECIDED 2026-06-11. Execution pending.") == ("DECIDED 2026-06-11. Execution pending.")
 
     def test_caps_long_status(self):
         assert len(summarize_status("word " * 200)) <= STATUS_LIMIT
@@ -161,9 +159,7 @@ class TestBuildDigest:
 
     def test_stays_silent_when_within_budget(self, tmp_path):
         (tmp_path / "self").mkdir()
-        (tmp_path / "self" / "goals.md").write_text(
-            "## Active Threads\n- **One** -- a short status.\n"
-        )
+        (tmp_path / "self" / "goals.md").write_text("## Active Threads\n- **One** -- a short status.\n")
         digest = build_digest(tmp_path)
         assert "BUDGET EXCEEDED" not in digest
         assert len(digest.encode("utf-8")) < BYTE_BUDGET

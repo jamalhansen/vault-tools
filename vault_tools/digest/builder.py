@@ -205,13 +205,15 @@ def append_session_log(vault: Path, counts: dict[str, int], orphan_count: int | 
         writer = csv.DictWriter(f, fieldnames=SESSION_LOG_HEADER)
         if write_header:
             writer.writeheader()
-        writer.writerow({
-            "date": datetime.now().astimezone().date().isoformat(),
-            "inbox": counts.get("inbox", 0),
-            "tensions": counts.get("tensions", 0),
-            "observations": counts.get("observations", 0),
-            "orphans": orphan_count if orphan_count is not None else "",
-        })
+        writer.writerow(
+            {
+                "date": datetime.now().astimezone().date().isoformat(),
+                "inbox": counts.get("inbox", 0),
+                "tensions": counts.get("tensions", 0),
+                "observations": counts.get("observations", 0),
+                "orphans": orphan_count if orphan_count is not None else "",
+            }
+        )
 
 
 def build_digest(

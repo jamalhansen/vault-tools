@@ -39,10 +39,12 @@ def parse_tension(path: Path) -> dict:
 def format_row(tension: dict) -> str:
     """Format a tension dict as a pipe-delimited index row."""
     notes_str = ", ".join(tension["notes"]) if tension["notes"] else ""
-    return " | ".join([
-        tension["filename"],
-        tension["status"],
-        tension["domain"],
-        notes_str,
-        tension["description"],
-    ])
+    return " | ".join(
+        [
+            tension["filename"],
+            tension["status"],
+            tension["domain"],
+            notes_str,
+            tension["description"],
+        ]
+    )

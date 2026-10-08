@@ -53,8 +53,8 @@ def build(
         typer.Option(
             "--subdirs",
             help="comma-separated subdirs to index, relative to --vault (default: notes -- "
-                 "e.g. Contexta uses notes/, a vault with a different layout like KeySix's "
-                 "thinking-notes/ needs this set explicitly)",
+            "e.g. Contexta uses notes/, a vault with a different layout like KeySix's "
+            "thinking-notes/ needs this set explicitly)",
         ),
     ] = "notes",
 ) -> None:
@@ -72,10 +72,13 @@ def build(
 def query(
     query: Annotated[str, typer.Argument()],
     db: Annotated[
-        str, typer.Option("--db", help="index file path (default: Contexta's index -- pass explicitly for any other vault)")
+        str,
+        typer.Option("--db", help="index file path (default: Contexta's index -- pass explicitly for any other vault)"),
     ] = str(_default_db_for(Path.home() / "vaults" / "Contexta")),
     top: Annotated[int, typer.Option("--top")] = 10,
-    weights_arg: Annotated[str | None, typer.Option("--weights", help="title,description,body (default: 10,5,1)")] = None,
+    weights_arg: Annotated[
+        str | None, typer.Option("--weights", help="title,description,body (default: 10,5,1)")
+    ] = None,
     explain: Annotated[bool, typer.Option("--explain", help="show per-field score breakdown")] = False,
 ) -> None:
     """Run a weighted BM25 query."""
@@ -85,7 +88,9 @@ def query(
         if weights_arg:
             parts = [float(x) for x in weights_arg.split(",")]
             if len(parts) != 3:
-                print("error: --weights needs exactly 3 comma-separated numbers (title,description,body)", file=sys.stderr)
+                print(
+                    "error: --weights needs exactly 3 comma-separated numbers (title,description,body)", file=sys.stderr
+                )
                 raise typer.Exit(1)
             weights = tuple(parts)
 
@@ -115,7 +120,9 @@ def query(
 def status(
     vault: VaultOption = None,
     db: Annotated[str | None, typer.Option("--db", help="index file path (default: one per vault name)")] = None,
-    subdirs: Annotated[str, typer.Option("--subdirs", help="comma-separated subdirs, must match what 'build' used")] = "notes",
+    subdirs: Annotated[
+        str, typer.Option("--subdirs", help="comma-separated subdirs, must match what 'build' used")
+    ] = "notes",
 ) -> None:
     """Check index freshness against the vault's newest note."""
     with timed_run("vault-tools", None, source_location=db or vault):
@@ -130,7 +137,9 @@ def status(
 
         print(f"Index: {db_path}")
         print(f"Built at:        {report.index_built_at.isoformat(sep=' ', timespec='minutes')}")
-        print(f"Newest note at:  {report.newest_note_at.isoformat(sep=' ', timespec='minutes') if report.newest_note_at else 'n/a'}")
+        print(
+            f"Newest note at:  {report.newest_note_at.isoformat(sep=' ', timespec='minutes') if report.newest_note_at else 'n/a'}"
+        )
         print(f"Notes on disk:   {report.note_count}")
         if report.stale:
             print("STALE -- a note has changed since the index was built. Run 'wsearch build'.")

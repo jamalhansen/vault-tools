@@ -63,8 +63,12 @@ class TestAudit:
         projects_dir = tmp_path / "projects"
         uv_dir = tmp_path / "uv-tools"
         (projects_dir / "shared-tool").mkdir(parents=True)
-        _write_doc(tools_dir, "05-a.md", status="draft", github="https://github.com/jamalhansen/shared-tool", tool_number=5)
-        _write_doc(tools_dir, "15-b.md", status="built", github="https://github.com/jamalhansen/shared-tool", tool_number=15)
+        _write_doc(
+            tools_dir, "05-a.md", status="draft", github="https://github.com/jamalhansen/shared-tool", tool_number=5
+        )
+        _write_doc(
+            tools_dir, "15-b.md", status="built", github="https://github.com/jamalhansen/shared-tool", tool_number=15
+        )
 
         findings = audit(tools_dir, projects_dir, uv_dir)
         cross_wire = [f for f in findings if "cross-wire" in f.issue]

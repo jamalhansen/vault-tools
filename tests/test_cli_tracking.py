@@ -24,10 +24,14 @@ def _tracking_db():
 
 
 def _last_run():
-    return _tracking_db().execute(
-        "SELECT tool_name, success FROM processing_log "
-        "WHERE tool_name = 'vault-tools' ORDER BY created_at DESC LIMIT 1"
-    ).fetchone()
+    return (
+        _tracking_db()
+        .execute(
+            "SELECT tool_name, success FROM processing_log "
+            "WHERE tool_name = 'vault-tools' ORDER BY created_at DESC LIMIT 1"
+        )
+        .fetchone()
+    )
 
 
 def test_vault_digest_logs_a_run():

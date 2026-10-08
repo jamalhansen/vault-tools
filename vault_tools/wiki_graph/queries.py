@@ -61,10 +61,7 @@ def get_broken(
 def get_backlinks(target_title: str, outgoing: dict[str, list[str]]) -> list[str]:
     """Return all note slugs that link to the given note title."""
     target_slug = slugify(target_title)
-    return sorted(
-        source for source, targets in outgoing.items()
-        if target_slug in targets
-    )
+    return sorted(source for source, targets in outgoing.items() if target_slug in targets)
 
 
 def get_orphans(
