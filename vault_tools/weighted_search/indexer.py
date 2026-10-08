@@ -19,6 +19,16 @@ from vault_tools.shared.vault import find_md_files
 
 _TITLE_RE = re.compile(r"^#\s+(.+)$", re.MULTILINE)
 
+# notes/archived/ holds notes with status: archived that /prune moved out of the live
+# set. They keep their filenames so old wikilinks resolve, which also means a plain
+# rglob keeps indexing them: 37 archived notes were surfacing in search on 2026-09-26.
+_EXCLUDED_DIRS = frozenset({"archived"})
+
+
+def _live_md_files(vault: Path, subdirs: list[str] | None) -> list[Path]:
+    files = find_md_files(vault, subdirs=subdirs or ["notes"])
+    return [f for f in files if _EXCLUDED_DIRS.isdisjoint(f.relative_to(vault).parts)]
+
 
 def _extract_title(body: str) -> str:
     m = _TITLE_RE.search(body)
@@ -36,7 +46,7 @@ def build_index(vault: Path, db_path: Path, subdirs: list[str] | None = None) ->
     layout (e.g. KeySix's thinking-notes/) must pass its own subdirs explicitly;
     there's no vault-detection magic here.
     """
-    files = find_md_files(vault, subdirs=subdirs or ["notes"])
+    files = _live_md_files(vault, subdirs)
 
     rows = []
     for f in files:
@@ -87,7 +97,7 @@ def check_staleness(vault: Path, db_path: Path, subdirs: list[str] | None = None
     nothing ever checked -- `build` has to be run manually and nothing flagged
     that it hadn't been.
     """
-    files = find_md_files(vault, subdirs=subdirs or ["notes"])
+    files = _live_md_files(vault, subdirs)
     newest = max((f.stat().st_mtime for f in files), default=None)
     newest_dt = datetime.fromtimestamp(newest) if newest is not None else None  # noqa: DTZ006 - local wall-clock mtimes, compared and printed locally
 
