@@ -19,13 +19,22 @@ def build_graph(vault: Path, verbose: bool = False) -> dict:
       outgoing:   {slug -> [linked slugs]}
       map_notes:  [slugs of files with type:map]
     """
-    md_files = find_md_files(vault)
+    md_files = find_md_files(vault)  # live notes only: archived ones are not nodes
 
     # Build file index: slug -> relative path
     file_index: dict[str, str] = {}
     for f in md_files:
         slug = slugify(f.stem)
         file_index[slug] = str(f.relative_to(vault))
+
+    # Archived notes still exist on disk, so a live note linking to one is not a
+    # broken link -- they're kept here, outside the graph, for get_broken to consult.
+    live = set(md_files)
+    archived: dict[str, str] = {
+        slugify(f.stem): str(f.relative_to(vault))
+        for f in find_md_files(vault, exclude_dirs=frozenset())
+        if f not in live
+    }
 
     if verbose:
         print(f"  Indexed {len(file_index)} files", flush=True)
@@ -50,6 +59,7 @@ def build_graph(vault: Path, verbose: bool = False) -> dict:
         "file_index": file_index,
         "outgoing": outgoing,
         "map_notes": map_notes,
+        "archived": archived,
     }
 
 
@@ -78,7 +88,10 @@ def load_graph(vault: Path) -> dict | None:
     if cache_mtime < newest_md:
         return None
 
-    return json.loads(cache_path.read_text(encoding="utf-8"))
+    graph = json.loads(cache_path.read_text(encoding="utf-8"))
+    if "archived" not in graph:  # built before archived notes left the node set (2026-10-08)
+        return None
+    return graph
 
 
 def get_graph(vault: Path, verbose: bool = False) -> dict:

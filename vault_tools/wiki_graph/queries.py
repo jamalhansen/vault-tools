@@ -40,8 +40,12 @@ def get_broken(
     outgoing: dict[str, list[str]],
     file_index: dict[str, str],
     exclude_scaffold: bool = True,
+    archived: dict[str, str] | None = None,
 ) -> list[tuple[str, str]]:
     """Return (source, broken_target) pairs for links with no matching file.
+
+    `archived` (graph["archived"]): notes that exist on disk but are not graph nodes;
+    a link to one of them is not broken.
 
     Cross-vault links (no file match) are included -- callers may want to filter.
     Scaffolding sources (see SCAFFOLD_PATH_PREFIXES) are excluded by default since
@@ -53,7 +57,7 @@ def get_broken(
         if exclude_scaffold and is_scaffold_path(file_index.get(source, "")):
             continue
         for target in targets:
-            if target not in file_index:
+            if target not in file_index and target not in (archived or {}):
                 broken.append((source, target))
     return sorted(broken)
 

@@ -87,3 +87,25 @@ class TestGetMembers:
     def test_excludes_nonexistent_targets(self, graph):
         members = get_members("notes-map", graph["outgoing"], graph["file_index"])
         assert "note-gamma" not in members
+
+
+class TestArchivedNotes:
+    """Archived notes are not graph nodes, but links to them are not broken (2026-10-08)."""
+
+    @pytest.fixture
+    def vault(self, tmp_path):
+        (tmp_path / "notes" / "archived").mkdir(parents=True)
+        (tmp_path / "notes" / "live.md").write_text("# live\n\nSee [[old-idea]] and [[never-existed]].\n")
+        (tmp_path / "notes" / "archived" / "old-idea.md").write_text("---\nstatus: archived\n---\n# old idea\n")
+        return tmp_path
+
+    def test_archived_note_is_not_a_node_but_a_known_target(self, vault):
+        graph = build_graph(vault)
+        assert "old-idea" not in graph["file_index"]
+        assert graph["archived"] == {"old-idea": "notes/archived/old-idea.md"}
+        assert "old-idea" not in get_orphans(graph["outgoing"], graph["file_index"], graph["map_notes"])
+
+    def test_link_to_archived_note_is_not_broken(self, vault):
+        graph = build_graph(vault)
+        broken = get_broken(graph["outgoing"], graph["file_index"], archived=graph["archived"])
+        assert broken == [("live", "never-existed")]

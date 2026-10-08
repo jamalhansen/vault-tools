@@ -19,6 +19,14 @@ class TestFindMdFiles:
         paths = [str(f) for f in files]
         assert all("notes" in p for p in paths)
 
+    def test_archived_is_left_out_by_default(self, tmp_path):
+        (tmp_path / "notes" / "archived").mkdir(parents=True)
+        (tmp_path / "notes" / "live.md").write_text("# live\n")
+        (tmp_path / "notes" / "archived" / "old.md").write_text("# old\n")
+        assert [f.name for f in find_md_files(tmp_path)] == ["live.md"]
+        assert [f.name for f in find_md_files(tmp_path, subdirs=["notes"])] == ["live.md"]
+        assert [f.name for f in find_md_files(tmp_path, exclude_dirs=frozenset())] == ["old.md", "live.md"]
+
 
 class TestExtractLinks:
     def test_extracts_simple_links(self):

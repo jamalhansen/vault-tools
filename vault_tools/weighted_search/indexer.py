@@ -19,15 +19,10 @@ from vault_tools.shared.vault import find_md_files
 
 _TITLE_RE = re.compile(r"^#\s+(.+)$", re.MULTILINE)
 
-# notes/archived/ holds notes with status: archived that /prune moved out of the live
-# set. They keep their filenames so old wikilinks resolve, which also means a plain
-# rglob keeps indexing them: 37 archived notes were surfacing in search on 2026-09-26.
-_EXCLUDED_DIRS = frozenset({"archived"})
-
 
 def _live_md_files(vault: Path, subdirs: list[str] | None) -> list[Path]:
-    files = find_md_files(vault, subdirs=subdirs or ["notes"])
-    return [f for f in files if _EXCLUDED_DIRS.isdisjoint(f.relative_to(vault).parts)]
+    """The notes to index: find_md_files already leaves notes/archived/ out (shared.vault)."""
+    return find_md_files(vault, subdirs=subdirs or ["notes"])
 
 
 def _extract_title(body: str) -> str:

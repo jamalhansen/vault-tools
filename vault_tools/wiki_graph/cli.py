@@ -71,7 +71,7 @@ def broken(ctx: typer.Context, no_cache: NoCache = False) -> None:
     with timed_run("vault-tools", None, source_location=str(ctx.obj["vault"])) as run:
         g = _graph(ctx, no_cache)
         run.item_count = len(g["file_index"])
-        pairs = get_broken(g["outgoing"], g["file_index"])
+        pairs = get_broken(g["outgoing"], g["file_index"], archived=g.get("archived"))
         if not pairs:
             print("No broken links found.")
             return

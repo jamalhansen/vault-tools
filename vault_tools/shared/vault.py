@@ -17,11 +17,23 @@ def resolve_vault(path: str | None) -> Path:
     return vault
 
 
-def find_md_files(vault: Path, subdirs: list[str] | None = None) -> list[Path]:
-    """Return all .md files in vault, optionally scoped to subdirectories."""
+# notes/archived/ holds notes /prune moved out of the live set. They keep their
+# filenames so old wikilinks still resolve, which also means a plain rglob keeps
+# finding them: archived notes were surfacing in wsearch and inflating the wiki
+# graph after the 2026-09-26/27 sweep (614 of Contexta's 1,445 notes). Every tool
+# gets the live set by default; pass exclude_dirs=frozenset() for everything.
+EXCLUDED_DIRS: frozenset[str] = frozenset({"archived"})
+
+
+def find_md_files(
+    vault: Path, subdirs: list[str] | None = None, exclude_dirs: frozenset[str] = EXCLUDED_DIRS
+) -> list[Path]:
+    """Return the vault's .md files, optionally scoped to subdirectories, skipping any
+    file with a path component in exclude_dirs (archived notes, by default)."""
     if subdirs:
-        files = []
+        files: list[Path] = []
         for subdir in subdirs:
             files.extend((vault / subdir).rglob("*.md"))
-        return sorted(files)
-    return sorted(vault.rglob("*.md"))
+    else:
+        files = list(vault.rglob("*.md"))
+    return sorted(f for f in files if exclude_dirs.isdisjoint(f.relative_to(vault).parts))
