@@ -10,6 +10,7 @@ from vault_tools.shared.wiki_links import slugify
 # wiki_links.py) already removes most of this category when examples are properly
 # backtick-wrapped; this covers the rest, where they aren't.
 SCAFFOLD_PATH_PREFIXES = (
+    "inbox/archive/",  # processed raw captures: pasted text, their [[links]] were never curated (2026-10-08)
     "ops/health/",
     "ops/work-wiki/",
     "ops/queue/",
